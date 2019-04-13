@@ -120,20 +120,30 @@ def add_to_spotify_playlist():
 
     sp.user_playlist_replace_tracks(USERNAME, PLAYLIST_ID, [])
     song_ids = []
+    failed_count = 0
+    success_count = 0
     for song in song_data["songs"]:
         song_author = song["author"] if song["author"] else ""
         song_id = _get_song_id(sp, song["title"], song_author)
         if song_id and song_id not in song_ids:
             song_ids.append(song_id)
+            success_count += 1
+        if song_id is None:
+            failed_count += 1
 
         if len(song_ids) == BATCH_ADD_SIZE:
             sp.user_playlist_add_tracks(USERNAME, PLAYLIST_ID, song_ids)
             song_ids = []
     if song_ids:
         sp.user_playlist_add_tracks(USERNAME, PLAYLIST_ID, song_ids)
+    print('# of successful songs: {}'.format(success_count))
+    print("# of failed songs: {}".format(failed_count))
+    print('Success Rate: {}%'.format(round(success_count / (failed_count + success_count) * 100)))
     print("done")
 
 
 if __name__ == "__main__":
     output_song_data()
+    print("Saved song data to songs.json")
     add_to_spotify_playlist()
+    print("Finished")

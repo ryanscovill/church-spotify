@@ -13,27 +13,34 @@ USERNAME = "227mrq3dhtua255wff2tegtrq"
 BATCH_ADD_SIZE = 5
 
 
-def auth():
-    key = os.getenv("PLANNING_CENTER_KEY")
-    secret = os.getenv("PLANNING_CENTER_SECRET")
+def get_config():
+    with open("config.json", "r") as config_file:
+        config = json.load(config_file)
+    return config
+
+
+def auth(config):
+    key = config.get("PLANNING_CENTER_ID")
+    secret = config.get("PLANNING_CENTER_SECRET")
+
     if not key or not secret:
         raise Exception("Could not find planning center credentials.")
     return HTTPBasicAuth(key, secret)
 
 
-def get_songs(offset=0):
+def get_songs(config, offset=0):
     return requests.get(
         "https://api.planningcenteronline.com/services/v2/songs",
         params={"per_page": 100, "offset": offset, "order": "-last_scheduled_at"},
-        auth=auth(),
+        auth=auth(config),
     ).json()
 
 
-def output_song_data():
-    song_response = get_songs()
+def output_song_data(config):
+    song_response = get_songs(config)
     song_data = song_response["data"]
     while song_response["meta"].get("next"):
-        song_response = get_songs(offset=song_response["meta"]["next"]["offset"])
+        song_response = get_songs(config, offset=song_response["meta"]["next"]["offset"])
         song_data.extend(song_response["data"])
 
     output_data = {"songs": []}
@@ -112,8 +119,13 @@ def _get_song_id(sp, title, author):
     return song_id
 
 
-def add_to_spotify_playlist():
-    token = util.prompt_for_user_token(USERNAME, scope="playlist-modify-private")
+def add_to_spotify_playlist(config):
+    token = util.prompt_for_user_token(
+        USERNAME,
+        client_id=config.get("SPOTIPY_CLIENT_ID"),
+        client_secret=config.get("SPOTIPY_CLIENT_SECRET"),
+        scope="playlist-modify-private",
+    )
     sp = spotipy.Spotify(auth=token)
     with open("songs.json", "r") as infile:
         song_data = json.load(infile)
@@ -136,14 +148,15 @@ def add_to_spotify_playlist():
             song_ids = []
     if song_ids:
         sp.user_playlist_add_tracks(USERNAME, PLAYLIST_ID, song_ids)
-    print('# of successful songs: {}'.format(success_count))
+    print("# of successful songs: {}".format(success_count))
     print("# of failed songs: {}".format(failed_count))
-    print('Success Rate: {}%'.format(round(success_count / (failed_count + success_count) * 100)))
+    print("Success Rate: {}%".format(round(success_count / (failed_count + success_count) * 100)))
     print("done")
 
 
 if __name__ == "__main__":
-    output_song_data()
+    cfg = get_config()
+    output_song_data(cfg)
     print("Saved song data to songs.json")
-    add_to_spotify_playlist()
+    add_to_spotify_playlist(cfg)
     print("Finished")

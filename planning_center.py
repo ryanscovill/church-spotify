@@ -8,6 +8,8 @@ class PlanningCenterWrapper(object):
     def __init__(self, config):
         self.config = config
         self.URL_ENDPOINT = "https://api.planningcenteronline.com/services/v2/"
+        self.SERVICE_TYPE = "287665"
+        self.USER_ID = "3878409"
 
     def auth(self):
         key = self.config.get("PLANNING_CENTER_ID")
@@ -26,10 +28,21 @@ class PlanningCenterWrapper(object):
         params = {"per_page": 100, "offset": offset, "order": "-last_scheduled_at"}
         return self._make_request("songs", params)
 
+    def get_person_plans(self):
+        person_plans = self._make_request("people/{user_id}/plan_people".format(user_id=self.USER_ID))
+        plan_ids = [item['relationships']['plan']['data']['id'] for item in person_plans['data']]
+        return plan_ids
+
+    def get_plan(self, plan_id):
+        url = "service_types/{service_type}/plans/{plan_id}".format(
+            service_type=self.SERVICE_TYPE, plan_id=str(plan_id)
+        )
+        data = self._make_request(url)
+        return data['data']
+
     def get_service_songs(self, plan_id):
-        service_type = "287665"
         url = "service_types/{service_type}/plans/{plan_id}/items".format(
-            service_type=service_type, plan_id=str(plan_id)
+            service_type=self.SERVICE_TYPE, plan_id=str(plan_id)
         )
         data = self._make_request(url)
         songs = [

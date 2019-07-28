@@ -8,7 +8,7 @@ from termcolor import colored
 
 class SpotifyWrapper(object):
     PLAYLIST_ID = "63ee8lZhphofTuxcLRqPYT"
-    USERNAME = "227mrq3dhtua255wff2tegtrq"
+    USER_NAME = "227mrq3dhtua255wff2tegtrq"
     BATCH_ADD_SIZE = 5
 
     def __init__(self, config):
@@ -17,10 +17,10 @@ class SpotifyWrapper(object):
 
     def get_api(self):
         token = util.prompt_for_user_token(
-            self.USERNAME,
+            self.USER_NAME,
             client_id=self.config.get("SPOTIPY_CLIENT_ID"),
             client_secret=self.config.get("SPOTIPY_CLIENT_SECRET"),
-            scope="playlist-modify-private",
+            scope="playlist-modify-private,playlist-read-private",
         )
         return spotipy.Spotify(auth=token)
 
@@ -50,7 +50,7 @@ class SpotifyWrapper(object):
         )
 
     def get_playlist_songs(self, playlist_id):
-        playlist = self.sp.user_playlist(self.USERNAME, playlist_id)
+        playlist = self.sp.user_playlist(self.USER_NAME, playlist_id)
         return playlist
 
     def get_playlist_song_names(self, playlist_id):
@@ -136,9 +136,18 @@ class SpotifyWrapper(object):
         print("done")
 
     def add_to_spotify_playlist(self, playlist_id, song_ids):
-        self.sp.user_playlist_replace_tracks(self.USERNAME, playlist_id, [])
+        self.sp.user_playlist_replace_tracks(self.USER_NAME, playlist_id, [])
         if len(song_ids) == self.BATCH_ADD_SIZE:
-            self.sp.user_playlist_add_tracks(self.USERNAME, playlist_id, song_ids)
+            self.sp.user_playlist_add_tracks(self.USER_NAME, playlist_id, song_ids)
             song_ids = []
         if song_ids:
-            self.sp.user_playlist_add_tracks(self.USERNAME, playlist_id, song_ids)
+            self.sp.user_playlist_add_tracks(self.USER_NAME, playlist_id, song_ids)
+
+    def create_playlist(self, name, description=None):
+        playlists = self.sp.user_playlists(self.USER_NAME)
+        existing = [item for item in playlists['items'] if item['name'] == name]
+        if existing:
+            return existing[0]['id']
+        else:
+            created_playlist = self.sp.user_playlist_create(self.USER_NAME, name, public=False, description=description)
+            return created_playlist['id']

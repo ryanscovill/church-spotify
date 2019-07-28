@@ -49,9 +49,9 @@ class SpotifyPlanningCenter(object):
 
         return results
 
-    def create_current_setlist(self):
-        playlist_id = "spotify:playlist:5DAq8fJVKpQjAQW52me09j"
-        service_songs = self.planning_center.get_service_songs("42496600")
+    def create_current_setlist(self, plan_id, title):
+        playlist_id = util.spotify.create_playlist(title)
+        service_songs = self.planning_center.get_service_songs(plan_id)
         cbc_songs = self.spotify.get_playlist_song_names(CBC_SUNDAY_WORSHIP_PLAYLIST)
         song_ids = self.match_songs(service_songs, cbc_songs)
         self.spotify.add_to_spotify_playlist(playlist_id, song_ids)
@@ -59,4 +59,11 @@ class SpotifyPlanningCenter(object):
 
 if __name__ == "__main__":
     util = SpotifyPlanningCenter()
-    util.create_current_setlist()
+    plan_ids = util.planning_center.get_person_plans()
+    for plan_id in plan_ids[:2]:
+        plan = util.planning_center.get_plan(plan_id)
+        plan_date = plan['attributes']['dates']
+        title_date = plan_date[:3] + " " + " ".join(plan_date.split(" ")[1:])
+        playlist_title = "CBC " + title_date
+        print("Creating Playlist for {} service...".format(playlist_title))
+        util.create_current_setlist(plan['id'], playlist_title)
